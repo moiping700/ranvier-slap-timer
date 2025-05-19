@@ -1,42 +1,45 @@
-function getNextFridayAt(timeStr) {
-  const [targetHour, targetMinute] = timeStr.split(':').map(Number);
+// Converts UTC time to GMT+8 (Singapore)
+function getSGTime() {
   const now = new Date();
-
-  // Create a new Date object for local timezone
-  const localNow = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds());
-
-  let target = new Date(localNow);
-  const currentDay = localNow.getDay(); // 0 (Sun) - 6 (Sat)
-
-  let daysUntilFriday = 5 - currentDay;
-  if (daysUntilFriday < 0) daysUntilFriday += 7;
-
-  target.setDate(localNow.getDate() + daysUntilFriday);
-  target.setHours(targetHour, targetMinute, 0, 0);
-
-  // If it's Friday and past the time, go to next Friday
-  if (
-    currentDay === 5 &&
-    (localNow.getHours() > targetHour ||
-     (localNow.getHours() === targetHour && localNow.getMinutes() >= targetMinute))
-  ) {
-    target.setDate(target.getDate() + 7);
-  }
-
-  return target;
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  return new Date(utc + 8 * 60 * 60 * 1000); // +8 hours
 }
 
+function getNextFridayAt_0940_SGT() {
+  const sgNow = getSGTime();
+
+  const year = sgNow.getFullYear();
+  const month = sgNow.getMonth();
+  const date = sgNow.getDate();
+  const day = sgNow.getDay(); // 0 (Sun) to 6 (Sat)
+
+  let targetDate = new Date(Date.UTC(year, month, date, 1, 40)); // 9:40am SGT is 01:40 UTC
+
+  // Add days to reach Friday (day 5)
+  let daysToAdd = (5 - day + 7) % 7;
+  if (daysToAdd === 0 && sgNow.getHours() >= 9 && sgNow.getMinutes() >= 40) {
+    daysToAdd = 7;
+  }
+
+  targetDate.setUTCDate(targetDate.getUTCDate() + daysToAdd);
+  return new Date(targetDate.getTime()); // target in SGT
+}
+
+const targetDate = getNextFridayAt_0940_SGT();
 const countdownElement = document.getElementById('countdown');
 const currentTimeElement = document.getElementById('current-time');
-const targetDate = getNextFridayAt("09:40");
 
 function updateCountdown() {
-  const now = new Date();
-  const localNow = new Date(now.getFullYear(), now.getMonth(), now.getDate(), now.getHours(), now.getMinutes(), now.getSeconds());
+  const now = getSGTime();
+  currentTimeElement.innerHTML = "Current Time (SGT): " + now.toTimeString().split(' ')[0];
 
-  currentTimeElement.innerHTML = "Current Time: " + localNow.toLocaleTimeString();
+  const distance = targetDate - now;
 
-  const distance = targetDate - localNow;
+  if (distance <= 0) {
+    countdownElement.innerHTML = "It's time!";
+    return;
+  }
+
   const totalSeconds = Math.floor(distance / 1000);
   const totalHours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
